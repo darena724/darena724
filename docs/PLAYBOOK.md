@@ -44,5 +44,39 @@ provider-abstracted video-generation MCP does the rendering; ffmpeg assembles.
 - Cross-clip Nimbo consistency stays unacceptable after the tuning order in Part 4.
 - Per-episode assembly annoys you more than a subscription would.
 
+## Part 1.5 — Model selection & the bake-off
+
+Do NOT hardwire one model. Build the generation MCP provider-abstracted (default: fal.ai or
+Replicate), with `model` as a parameter. Then run a one-afternoon bake-off before committing.
+
+### The bake-off (~$20, do this in Phase 1.5)
+
+Render the SAME single Nimbo shot (same reference images, same action, same 8s) on each of:
+
+- **Veo 3.1** — cheapest first-party; you have the key; 8s clips.
+- **Seedance (1.5/2.0 Fast)** — engineered for cross-scene character consistency; up to 9
+  reference images per call; 15s clips; no official API (proxy only).
+- **Kling 3.0** — strong subject consistency; multi-shot/storyboard inside one 15s clip,
+  which reduces stitching.
+
+Judge on: does Nimbo's face/shape/palette hold, and at what cost. Lock the winner. If Veo
+wins, switch the workhorse to direct Google API ($0.03/s). If Seedance wins, stay on the proxy.
+
+### Cost comparison (verify at build — prices move weekly)
+
+| Model                   | Cheapest ~$/sec | Clip max | 3-min raw (1 clean pass) | Notes                                               |
+| ----------------------- | --------------- | -------- | ------------------------ | --------------------------------------------------- |
+| Veo 3.1 (direct Google) | ~$0.03          | 8s       | ~$5.40                   | Cheapest first-party, stable; more stitches         |
+| Veo 3.1 (via fal)       | ~$0.10–0.20     | 8s       | ~$18–36                  | Aggregator markup; use direct if Veo wins           |
+| Seedance 1.5/2.0 Fast   | ~$0.022–0.05    | 15s      | ~$4–9                    | Best consistency; no first-party API (fal/ModelArk) |
+| Kling 3.0               | ~$0.029–0.13    | 15s      | ~$5–23                   | Multi-shot per clip; pricing varies widely          |
+| Wan 2.6                 | ~$0.05–0.07     | 10s      | ~$9–13                   | Open-weight, no audio (fine here)                   |
+| Sora 2                  | —               | —        | —                        | Discontinued (API dead) — skip                      |
+
+Budget protection: ALWAYS draft on the cheapest tier (Seedance Fast or Veo direct), review,
+then final-render only approved shots. Re-rendering everything on a premium tier is what
+breaks the $5–10 target.
+
 <!-- Additional playbook sections will be appended as provided. -->
+
 

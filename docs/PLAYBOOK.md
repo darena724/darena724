@@ -77,6 +77,48 @@ Budget protection: ALWAYS draft on the cheapest tier (Seedance Fast or Veo direc
 then final-render only approved shots. Re-rendering everything on a premium tier is what
 breaks the $5–10 target.
 
+## Part 2 — Architecture
+
+```
+nimbo-orchestrator/
+├─ .env                      # FAL_KEY or REPLICATE_API_TOKEN; GEMINI_API_KEY (if Veo direct);
+│                            # optional SUNO/ELEVENLABS keys
+├─ ARCHITECTURE.md           # decisions, written in Phase 0
+├─ pyproject.toml
+├─ mcp/
+│  └─ gen_server.py          # provider-abstracted MCP: generate_clip(model=...), get_status, list_models
+├─ src/
+│  ├─ lyrics.py              # Phase 2: lyrics + section/timing map
+│  ├─ character.py           # Phase 3: Nimbo config + style lock
+│  ├─ planner.py             # Phase 4: song+character -> shots.json
+│  ├─ render.py              # Phase 5: resumable render loop
+│  ├─ assemble.py            # Phase 6: ffmpeg concat + mux + captions
+│  └─ pipeline.py            # Phase 7: end-to-end w/ review stops + cost gate
+└─ projects/
+   └─ blue-song/
+      ├─ manifest.json       # source of truth; per-shot status for resume
+      ├─ character.json
+      ├─ lyrics.json
+      ├─ song.mp3
+      ├─ refs/               # canonical Nimbo reference images
+      ├─ shots/             # shot_01.mp4 ...
+      └─ final.mp4
+```
+
+### Key data contracts
+
+- `manifest.json`: project meta + ordered shot list, each with `status`
+  (pending | drafting | drafted | approved | rendering | done | failed), file paths,
+  model + tier used per shot.
+- `lyrics.json`: `{ sections: [{ name, start_s, end_s, text }] }`.
+- `character.json`: `{ name, ref_images:[...], style_lock:"...", negative:"...", palette:[...] }`.
+- `shots.json` (folded into manifest): each
+  `{ id, start_s, end_s, duration_s, scene, camera, action, prompt, ref_images, seed_from }`.
+
+**Why a manifest**: a multi-clip render WILL have partial failures. Everything keys off the
+manifest so re-running resumes instead of regenerating (and re-paying for) finished shots.
+
 <!-- Additional playbook sections will be appended as provided. -->
+
 
 

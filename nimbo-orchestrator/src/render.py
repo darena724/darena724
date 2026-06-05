@@ -65,6 +65,7 @@ class RenderError(RuntimeError):
 _DRAFT_RENDERABLE = {
     ShotStatus.pending,
     ShotStatus.failed,
+    ShotStatus.redo,
     ShotStatus.drafting,
     ShotStatus.rendering,
 }

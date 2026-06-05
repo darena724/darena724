@@ -46,8 +46,9 @@ nimbo-orchestrator/
       └─ final.mp4
 ```
 
-> **Build status:** Prompt 0 complete (scaffold + ADR + data contracts). Prompts 1–7 are
-> stubbed and implemented in order — see the `[Prompt N]` tags above.
+> **Build status:** Prompts 0–7 complete — the full `make-video` pipeline is wired and
+> tested (160 tests). Prompt 8 (local web frontend) is queued. The two steps that need the
+> ffmpeg binary + a FAL_KEY (render, assemble) run on your machine — see `LOCAL_SETUP.md`.
 
 ## Setup
 

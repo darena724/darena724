@@ -30,6 +30,7 @@ class ShotStatus(str, Enum):
     drafting = "drafting"
     drafted = "drafted"
     approved = "approved"
+    redo = "redo"  # user marked a draft for re-rendering (treated as renderable by the draft pass)
     rendering = "rendering"
     done = "done"
     failed = "failed"

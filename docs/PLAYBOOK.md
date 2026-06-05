@@ -15,4 +15,34 @@ A local, MCP-driven pipeline that turns a song + the Nimbo character into a fini
 - **No Veo/model audio.** Generate silent video; the user's MP3 is the only audio, muxed at
   assembly.
 
+## Part 1 — Pressure Test (read before building)
+
+### Verdict
+
+Feasible and a good fit. Local Python project; Claude Code orchestrates; a
+provider-abstracted video-generation MCP does the rendering; ffmpeg assembles.
+
+### The risks that remain, and how the design handles them
+
+1. **Subscription ≠ API access.** RESOLVED — using a paid video API with billing.
+   Consumer Gemini/Google AI credits are spendable only inside Flow/Whisk and are not
+   callable from code.
+2. **No model audio — that's the saving.** Generate silent on the cheapest tier; overlay
+   the MP3 at assembly. Never pay for native audio.
+3. **Consistency = reference images, not prompts (THE quality risk).** ~22 stitched clips.
+   Identity is carried by: (a) Nimbo reference images on EVERY call, (b) first-frame
+   seeding from the prior clip's last frame, (c) a fixed style string prepended to every
+   prompt. Prompts vary only action/camera/scene and must never redescribe Nimbo's
+   appearance.
+4. **Claude writes lyrics, not audio.** Step 1 outputs lyrics + a section/timing map + a
+   music-gen prompt. The MP3 comes from a music API (optional) or a manual drop. MP3 is a
+   pluggable input.
+5. **Lip-sync.** RESOLVED — not doing it. No extra model pass.
+
+### Bail criteria (when to drop this for a $59/mo wrapper)
+
+- Cross-clip Nimbo consistency stays unacceptable after the tuning order in Part 4.
+- Per-episode assembly annoys you more than a subscription would.
+
 <!-- Additional playbook sections will be appended as provided. -->
+

@@ -315,7 +315,25 @@ Guardrails:
 **Acceptance:** --dry-run shows plan + cost with no spend; a full run with approvals produces
 projects/blue-song/final.mp4 with Nimbo throughout and only the user's MP3 as audio.
 
+## Part 4 — Operating notes
+
+- **Do the bake-off (Prompt 1.5) before anything else expensive.** One Nimbo shot across
+  Veo/Seedance/Kling settles the consistency-vs-cost question empirically.
+- **Always draft on the cheapest tier.** The expensive mistake is rendering all shots on a
+  premium tier before confirming Nimbo holds.
+- **Consistency tuning order** if Nimbo drifts: (1) cleaner reference images, (2) confirm
+  first-frame seeding is chaining, (3) shorter shots, (4) less scene variety per shot, (5) only
+  then touch the prompt.
+- **Verify model IDs / SDK names / endpoint params at build time.** They change; the prompts
+  tell Claude Code to look them up rather than trust stale strings.
+- **Lock the workhorse, then optimize.** Once one model handles ~80% of shots well, move it to
+  its direct API (Veo via Google = $0.03/s) to shed the aggregator markup. Seedance has no
+  first-party API, so if it wins you stay on a proxy.
+- **Keep music pluggable.** Drop your own MP3 or wire Suno/ElevenLabs; the video stage doesn't
+  care how the MP3 was made.
+
 <!-- Additional playbook sections will be appended as provided. -->
+
 
 
 

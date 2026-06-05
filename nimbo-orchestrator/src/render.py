@@ -34,7 +34,11 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
+
+# Optional progress hook: called as progress(event, shot) where event is one of
+# "skip" | "start" | "done" | "failed". Lets the web UI stream per-shot activity.
+ProgressCb = Callable[[str, "Shot"], None]
 
 from .character import load_character
 from .models import Manifest, Shot, ShotStatus, load_manifest, save_manifest
@@ -273,6 +277,7 @@ async def _run_pass(
     out_subdir: str,
     confirm: bool,
     max_retries: int,
+    progress: Optional[ProgressCb] = None,
 ) -> PassSummary:
     manifest_path = project_dir / "manifest.json"
     if not manifest_path.exists():
@@ -306,9 +311,13 @@ async def _run_pass(
 
     for shot in manifest.shots:
         if shot.status not in renderable:
+            if progress:
+                progress("skip", shot)
             continue
         shot.status = in_progress_status
         save_manifest(manifest, manifest_path)  # mark in-progress BEFORE the call (resumability)
+        if progress:
+            progress("start", shot)
 
         print(f"→ {pass_name}: {shot.id} ({_snap_duration(model_id, shot.duration_s)}s) …")
         ok = await _render_shot(
@@ -320,6 +329,8 @@ async def _run_pass(
         )
         shot.status = success_status if ok else ShotStatus.failed
         save_manifest(manifest, manifest_path)  # save AFTER each shot (resumability)
+        if progress:
+            progress("done" if ok else "failed", shot)
 
         if ok:
             summary.rendered.append(shot.id)
@@ -335,7 +346,9 @@ async def _run_pass(
     return summary
 
 
-async def draft_pass(project_dir: Path, *, confirm: bool, max_retries: int = 3) -> PassSummary:
+async def draft_pass(
+    project_dir: Path, *, confirm: bool, max_retries: int = 3, progress: Optional[ProgressCb] = None
+) -> PassSummary:
     """Render every renderable shot on the cheapest (draft) model/tier into shots/."""
     return await _run_pass(
         project_dir,
@@ -348,10 +361,13 @@ async def draft_pass(project_dir: Path, *, confirm: bool, max_retries: int = 3) 
         out_subdir="shots",
         confirm=confirm,
         max_retries=max_retries,
+        progress=progress,
     )
 
 
-async def final_pass(project_dir: Path, *, confirm: bool, max_retries: int = 3) -> PassSummary:
+async def final_pass(
+    project_dir: Path, *, confirm: bool, max_retries: int = 3, progress: Optional[ProgressCb] = None
+) -> PassSummary:
     """Re-render only APPROVED shots on the locked final model/tier into finals/."""
     return await _run_pass(
         project_dir,
@@ -364,6 +380,7 @@ async def final_pass(project_dir: Path, *, confirm: bool, max_retries: int = 3) 
         out_subdir="finals",
         confirm=confirm,
         max_retries=max_retries,
+        progress=progress,
     )
 
 

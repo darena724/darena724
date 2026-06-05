@@ -46,9 +46,18 @@ nimbo-orchestrator/
       └─ final.mp4
 ```
 
-> **Build status:** Prompts 0–7 complete — the full `make-video` pipeline is wired and
-> tested (160 tests). Prompt 8 (local web frontend) is queued. The two steps that need the
-> ffmpeg binary + a FAL_KEY (render, assemble) run on your machine — see `LOCAL_SETUP.md`.
+> **Build status:** Prompts 0–8 complete — the full `make-video` CLI **and** a local web UI
+> (`nimbo-web`), tested (178 tests). The two steps that need the ffmpeg binary + a FAL_KEY
+> (render, assemble) run on your machine — see `LOCAL_SETUP.md`.
+
+## Two ways to run it
+
+- **Web UI (no terminal):** `nimbo-web` (or `./scripts/start-web.sh`) → open
+  http://127.0.0.1:8000. Setup, the four review stops, draft previews + approve/redo, cost
+  confirms, captions, and a toggleable **activity log** for diagnosis — all in the browser.
+- **CLI:** `make-video --project blue-song --topic "learning the color blue"`.
+
+Both share the same `projects/<name>/` files. See `LOCAL_SETUP.md`.
 
 ## Setup
 

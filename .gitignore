@@ -28,3 +28,10 @@ output/
 .idea/
 .vscode/
 *.swp
+
+# Web UI runtime artifacts
+nimbo-orchestrator/logs/
+logs/
+*.jsonl
+captions.ass
+bakeoff/

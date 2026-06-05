@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nimbo Orchestrator</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">☁️ <strong>Nimbo</strong> Orchestrator</div>
+    <div class="header-actions">
+      <button id="btn-settings" class="ghost">⚙ Settings</button>
+      <button id="btn-logpanel" class="ghost">📋 Activity Log</button>
+    </div>
+  </header>
+
+  <div id="health-banner" class="banner hidden"></div>
+
+  <main>
+    <section id="sidebar">
+      <h2>Projects</h2>
+      <ul id="project-list" class="project-list"></ul>
+      <div class="new-project">
+        <h3>New project</h3>
+        <input id="np-name" placeholder="project name (e.g. red-song)" />
+        <input id="np-topic" placeholder='topic (e.g. "learning the color red")' />
+        <div class="or">— or —</div>
+        <label class="filelabel">Bring your own MP3
+          <input id="np-mp3" type="file" accept="audio/mpeg,.mp3" />
+        </label>
+        <button id="np-create">Create</button>
+      </div>
+    </section>
+
+    <section id="workspace">
+      <div id="empty-state" class="empty">Pick a project, or create one to begin.</div>
+      <div id="project-view" class="hidden">
+        <div class="project-head">
+          <h2 id="pv-name"></h2>
+          <div id="pv-stepper" class="stepper"></div>
+        </div>
+        <div id="pv-warnings" class="warnings hidden"></div>
+        <div id="pv-stage"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings drawer -->
+  <div id="settings-drawer" class="drawer hidden">
+    <div class="drawer-inner">
+      <h2>Settings</h2>
+      <h3>Environment</h3>
+      <div id="env-status" class="env"></div>
+      <h3>API keys</h3>
+      <p class="hint">Stored locally in <code>.env</code>. Needed to render (FAL_KEY) and optionally generate music / Veo-direct (GEMINI).</p>
+      <label>FAL_KEY <input id="k-fal" type="password" placeholder="fal_…" /></label>
+      <label>GEMINI_API_KEY <input id="k-gemini" type="password" placeholder="optional" /></label>
+      <label>SUNO_API_KEY <input id="k-suno" type="password" placeholder="optional" /></label>
+      <label>ELEVENLABS_API_KEY <input id="k-eleven" type="password" placeholder="optional" /></label>
+      <button id="save-keys">Save keys</button>
+      <hr />
+      <label class="toggle">
+        <input id="verbose-toggle" type="checkbox" />
+        <span>Verbose activity logging (records DEBUG events for diagnosis)</span>
+      </label>
+      <button class="ghost" id="close-settings">Close</button>
+    </div>
+  </div>
+
+  <!-- Activity log drawer -->
+  <div id="log-drawer" class="drawer right hidden">
+    <div class="drawer-inner">
+      <h2>Activity Log</h2>
+      <div class="log-controls">
+        <label class="toggle small">
+          <input id="log-verbose" type="checkbox" /><span>verbose</span>
+        </label>
+        <select id="log-level">
+          <option value="debug">all</option>
+          <option value="info" selected>info+</option>
+          <option value="warning">warnings+</option>
+          <option value="error">errors</option>
+        </select>
+        <label class="toggle small"><input id="log-auto" type="checkbox" checked /><span>auto</span></label>
+        <button class="ghost" id="log-clear">clear</button>
+        <button class="ghost" id="close-log">close</button>
+      </div>
+      <div id="log-stream" class="log-stream"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

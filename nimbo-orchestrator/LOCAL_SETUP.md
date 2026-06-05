@@ -1,7 +1,58 @@
 # Running nimbo-orchestrator on your local machine
 
-This is a **CLI tool**, not a web app — there is no web frontend in the v2 playbook.
-Interaction happens entirely in your **terminal + a video player**:
+> **Prefer not to use the terminal?** There's a local **web UI** — jump to
+> [Using the web UI](#using-the-web-ui-no-cli-needed). You still run one command once to
+> start it, then everything happens in your browser.
+
+The pipeline can be driven two ways: the **web UI** (recommended if you're not comfortable
+with the command line) or the **CLI**. Both do the exact same thing and share the same
+`projects/<name>/` files.
+
+## Using the web UI (no CLI needed)
+
+After the one-time setup (steps 1–5 below: install Python, ffmpeg, deps), start the UI:
+
+```bash
+# from the nimbo-orchestrator folder, run ONE of these:
+./scripts/start-web.sh           # macOS/Linux (double-clickable in Finder/Files)
+# or
+python -m web.app
+# or, if installed:
+nimbo-web
+```
+
+Then open **http://127.0.0.1:8000** in your browser. Everything else is point-and-click:
+
+1. **⚙ Settings** → paste your **FAL_KEY** (and optionally GEMINI/Suno/ElevenLabs). It's saved
+   to your local `.env`. The Settings panel also shows whether ffmpeg is installed.
+2. **New project** → type a name + a topic (e.g. *learning the color red*) **or** upload an
+   MP3. Click **Create**.
+3. **Review lyrics** → edit any line, **Save**, then **build shot plan**.
+4. **Review the shot plan** → **Render drafts** (you'll see the estimated cost and confirm).
+   Progress shows live; watch the **📋 Activity Log** for details.
+5. **Review drafts** → each shot plays inline. Click **✓ Approve** (keep, re-render at higher
+   quality) or **↻ Redo** (re-draft). Then **Final render**, or **Assemble drafts as-is**.
+6. **Assemble** → optional captions toggle → **final.mp4** plays in the browser with a
+   **Download** button.
+
+### Activity log + diagnosing problems
+
+Click **📋 Activity Log** (top right) any time. It shows a live, timestamped record of every
+action — *and every non-action*: cost gates held, "nothing to render", skipped shots,
+validation warnings, and errors. So if something doesn't happen when you expect, the log
+tells you why.
+
+Flip **Verbose** (in the log panel or in Settings) to also record low-level DEBUG events
+(per-shot skips, cost previews) for deeper troubleshooting. The setting is remembered. If you
+ever need to share what went wrong, the log lives at `logs/activity.jsonl`.
+
+> The web server binds to `127.0.0.1` only — it's not reachable from other machines.
+
+---
+
+## Using the CLI
+
+Interaction happens in your **terminal + a video player**:
 
 1. you run `make-video --project <name> --topic "..."` (or `--mp3 <path>`)
 2. the pipeline **pauses at four review stops**; you inspect files and confirm with `--yes`

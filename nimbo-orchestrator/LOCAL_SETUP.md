@@ -145,6 +145,59 @@ Everything is keyed off `manifest.json`. Want to redo just a couple of shots?
 
 Kill the process mid-render? Same thing — re-run and it picks up where it left off.
 
+## Assembly (ffmpeg) — running it manually
+
+The render loop (Prompt 5) and assembly (Prompt 6) are the two steps that need the **ffmpeg
+binary** on your machine — they can't run in the cloud sandbox, so here's the manual flow.
+
+```bash
+# 0. confirm ffmpeg + ffprobe are installed
+python scripts/doctor.py        # both must be ✓
+
+# 1. plan the shots (writes manifest.json)
+python -m src.planner --project blue-song --topic "learning the color blue"
+
+# 2. DRAFT render — prints the cost first; nothing is spent until you add --yes
+python -m src.render --project blue-song --pass draft           # cost preview only
+python -m src.render --project blue-song --pass draft --yes     # actually renders
+
+#    clips land in projects/blue-song/shots/shot_*.mp4 — watch them in VLC.
+#    To approve a shot for the final pass, set its "status" to "approved" in manifest.json.
+#    (Leave the rest as "drafted"; only approved shots get the pricier final render.)
+
+# 3. FINAL render of approved shots (optional — drafts are fine to assemble too)
+python -m src.render --project blue-song --pass final --yes
+
+# 4. assemble — preview the exact ffmpeg command without running it:
+python -m src.assemble --project blue-song --captions --dry-run
+#    then run it for real:
+python -m src.assemble --project blue-song --captions
+```
+
+Output: `projects/blue-song/final.mp4` — play it in VLC/QuickTime.
+
+**What assembly does**, so you can eyeball/verify it:
+- Concatenates the shot clips **in manifest order**, re-encoding each to a uniform
+  `1280x720 @ 24fps` (from your `resolution`/`aspect_ratio`) so there are no concat glitches.
+- Muxes `song.mp3` as the **only** audio — any sound the model put on the clips is dropped.
+- Forces `final.mp4` to the **song's exact length**: the video holds its last frame if the
+  clips run short, then both streams are trimmed with `-t`. So Nimbo is on screen the whole time.
+- With `--captions`, burns the lyric lines (timed per section) in a large rounded font in the
+  lower third, generated as `captions.ass`.
+
+**Captions font.** The default is `Comic Sans MS` (rounded, kid-friendly). If it's not
+installed, libass falls back to a system default. To use another, pass `--font "Baloo 2"`
+(or any installed family). On Linux, install a rounded font and refresh the cache:
+`sudo apt-get install fonts-comic-neue && fc-cache -f`.
+
+**Verify the result quickly:**
+```bash
+ffprobe -v error -show_entries format=duration -of csv=p=0 projects/blue-song/final.mp4
+# should match your song length within ~0.5s
+ffprobe -v error -select_streams a -show_entries stream=codec_name -of csv=p=0 \
+  projects/blue-song/final.mp4        # should be 'aac' (your muxed MP3)
+```
+
 ## Troubleshooting
 
 | Symptom                                | Cause / fix                                                            |

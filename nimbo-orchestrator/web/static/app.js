@@ -154,15 +154,13 @@ async function renderProject() {
     const cls = i < activeIdx ? "done" : i === activeIdx ? "active" : "";
     return `<span class="step ${cls}">${label}</span>`;
   }).join("");
-  // warnings (ref images etc.)
-  const w = $("pv-warnings");
-  if (p.ref_warnings && p.ref_warnings.length) {
-    w.innerHTML = "⚠ " + p.ref_warnings.join("<br>⚠ ");
-    w.classList.remove("hidden");
-  } else w.classList.add("hidden");
+  // (ref-image warnings are shown inside the Reference images card, with an upload button)
+  $("pv-warnings").classList.add("hidden");
 
   const stage = $("pv-stage");
   stage.innerHTML = "";
+  // Nimbo reference images — needed for consistent identity on every render
+  stage.appendChild(refsCard(p));
   // model picker — available once a plan exists (it reads/writes the manifest models)
   if (p.project) stage.appendChild(modelCard(p));
   if (p.stage === "song" || p.stage === "lyrics") stage.appendChild(lyricsPanel(p));
@@ -175,6 +173,80 @@ async function renderProject() {
 
   // keep polling while a job runs
   if (p.job && p.job.status === "running") startJobPoll();
+}
+
+// ── Reference images ────────────────────────────────────────────────────────
+const REF_PROMPT =
+`Character design model sheet for an original children's animated mascot named Nimbo, on a plain off-white studio background. Nimbo is a small, round, plush-toy-like invented creature — not a real animal, not human: a soft egg-shaped body in warm matte cream/oatmeal, short rounded arms, stubby little feet, oversized gentle dark eyes set close together with soft highlights, small soft coral cheeks, and a tiny friendly smile. Calm, sweet, approachable expression.
+
+Signature feature: a soft, translucent rounded cloud on top of the head that works like a gentle glowing badge. The cloud glows softly; the body never changes shape.
+
+Show a clean model sheet: front view, 3/4 view, and side view with consistent proportions.
+
+Style: clean modern soft 3D render, smooth matte soft-touch surfaces, simple rounded shapes, gentle even studio lighting, soft ambient shadows. Muted, soothing, premium pastel palette with one warm glow accent — NOT neon, NOT high-saturation. Designer-toy / gentle Pixar-adjacent aesthetic. White background, no text, no logos. 16:9`;
+
+function refsCard(p) {
+  const el = div("card");
+  const refs = (p.character && p.character.ref_images) || [];
+  const warns = p.ref_warnings || [];
+  el.innerHTML = `<h3>🖼 Nimbo reference picture${refs.length === 1 ? "" : "s"}</h3>
+    <p class="muted">This is the picture of Nimbo that gets sent with <b>every</b> shot so he looks
+      the same all the way through the video. You need at least one before rendering.</p>`;
+
+  if (warns.length) {
+    const wd = div("warnings");
+    wd.innerHTML = "⚠ " + warns.join("<br>⚠ ");
+    el.appendChild(wd);
+  }
+
+  // thumbnails of whatever is already there
+  if (refs.length) {
+    const grid = div("shot-grid");
+    refs.forEach((r) => {
+      const fname = r.split("/").pop();
+      const c = div("shot-card");
+      c.innerHTML = `<img src="/api/projects/${current}/refs/${encodeURIComponent(fname)}"
+          style="width:100%;border-radius:8px;background:#fff"
+          onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'muted',textContent:'(not uploaded yet)'}))"/>
+        <div class="muted" style="font-size:.78rem">${escapeHtml(fname)}</div>`;
+      grid.appendChild(c);
+    });
+    el.appendChild(grid);
+  }
+
+  // upload control
+  const up = div("");
+  up.innerHTML = `<label class="filelabel" style="margin-top:10px">Add a picture (PNG or JPG)
+     <input id="ref-file" type="file" accept="image/png,image/jpeg,image/webp"/></label>`;
+  const btnUp = btn("⬆ Upload reference picture", async () => {
+    const f = el.querySelector("#ref-file").files[0];
+    if (!f) return alert("Choose an image file first.");
+    const fd = new FormData();
+    fd.append("image", f);
+    try {
+      await api(`/api/projects/${current}/refs`, { method: "POST", body: fd });
+      flash("Reference picture added.");
+      renderProject();
+    } catch (e) { alert("Upload failed: " + e.message); }
+  });
+  el.append(up, btnUp);
+
+  // "how do I make one?" helper with a copy-paste prompt
+  const det = document.createElement("details");
+  det.style.marginTop = "12px";
+  det.innerHTML = `<summary style="cursor:pointer"><b>Don't have a picture yet? How to make one →</b></summary>
+    <div class="muted" style="margin-top:8px">
+      Use any image generator (ChatGPT/DALL·E, Google's Gemini/Imagen, or Midjourney). Paste the
+      prompt below, generate the picture, save it to your computer, then click <b>Upload reference
+      picture</b> above. A clean picture on a plain background works best.
+    </div>
+    <textarea readonly rows="10" style="width:100%;margin-top:8px;border:1px solid var(--edge);border-radius:8px;padding:8px;font:inherit">${escapeHtml(REF_PROMPT)}</textarea>`;
+  const copyBtn = btn("📋 Copy the prompt", () => {
+    navigator.clipboard.writeText(REF_PROMPT).then(() => flash("Prompt copied — paste it into your image generator."));
+  });
+  det.appendChild(copyBtn);
+  el.appendChild(det);
+  return el;
 }
 
 // ── STOP 1: lyrics ──────────────────────────────────────────────────────────

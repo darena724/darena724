@@ -281,3 +281,45 @@ def test_cap_mismatch_warning(client):
 def test_invalid_model_rejected(client):
     name = _plan(client)
     assert client.post(f"/api/projects/{name}/models", json={"final_model": "nope"}).status_code == 400
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Reference image upload + serving
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _png_bytes():
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (32, 32), (245, 240, 230)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_ref_upload_clears_warning_and_serves(client):
+    client.post("/api/projects?name=rp&topic=learning the color blue")
+    # before: a missing-ref warning is present
+    p = client.get("/api/projects/rp").json()
+    assert any("missing" in w for w in p["ref_warnings"])
+
+    # upload a real PNG
+    r = client.post(
+        "/api/projects/rp/refs",
+        files={"image": ("nimbo_modelsheet.png", _png_bytes(), "image/png")},
+    )
+    assert r.status_code == 200
+
+    # warning cleared, ref discovered, and the image is served back
+    p2 = client.get("/api/projects/rp").json()
+    assert p2["ref_warnings"] == []
+    assert "refs/nimbo_modelsheet.png" in p2["character"]["ref_images"]
+    img = client.get("/api/projects/rp/refs/nimbo_modelsheet.png")
+    assert img.status_code == 200
+    assert img.content[:4] == b"\x89PNG"
+
+
+def test_ref_image_path_traversal_blocked(client):
+    client.post("/api/projects?name=rp2&topic=learning the color blue")
+    assert client.get("/api/projects/rp2/refs/..%2F..%2Fsecret").status_code in (400, 404)

@@ -540,6 +540,16 @@ def create_app(
             raise HTTPException(404, "song.mp3 not present")
         return FileResponse(str(f), media_type="audio/mpeg")
 
+    @app.get("/api/projects/{name}/refs/{filename}")
+    def ref_image(name: str, filename: str) -> FileResponse:
+        p = require_project(name)
+        if "/" in filename or "\\" in filename or ".." in filename:
+            raise HTTPException(400, "invalid filename")
+        f = p / "refs" / filename
+        if not f.exists():
+            raise HTTPException(404, "reference image not found")
+        return FileResponse(str(f))
+
     # ── activity log ──────────────────────────────────────────────────────────
     @app.get("/api/log")
     def get_log(project: Optional[str] = None, limit: int = 200, level: str = "debug") -> dict:

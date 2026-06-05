@@ -332,6 +332,49 @@ projects/blue-song/final.mp4 with Nimbo throughout and only the user's MP3 as au
 - **Keep music pluggable.** Drop your own MP3 or wire Suno/ElevenLabs; the video stage doesn't
   care how the MP3 was made.
 
+### PROMPT 8 — Local web frontend (queued; built after Prompt 7)
+
+Build a **local-only** web UI that wraps the same `make-video` CLI / pipeline functions
+and reads/writes the exact same `projects/<name>/` directory. No deployment, no auth, no
+external hosting — runs entirely on the user's machine, outputs land in the local
+filesystem next to the CLI's outputs.
+
+Stack: **FastAPI + uvicorn**, served on `http://127.0.0.1:8000`. Single-page UI with
+plain HTML/CSS/JS (or HTMX for partial updates) — no SPA framework needed.
+
+Surface the four mandatory review stops from Prompt 7 as discrete pages:
+1. **Project picker / new project** — list `projects/*`, "+ New" creates a folder + seeds
+   `manifest.json` from a topic or an MP3 path.
+2. **Lyrics review** — editable `lyrics.json` (sections, timings, text); save + continue.
+3. **Shot plan review** — table of shots; edit `scene` / `camera` / `action`; save +
+   continue.
+4. **Draft review** — grid of thumbnails (extracted via ffmpeg from each `shots/shot_*.mp4`)
+   with an inline `<video>` preview; per-shot **Approve / Redo** buttons that write
+   `status` to the manifest.
+5. **Final assembly** — cost confirm + Render button → tail log → play `final.mp4`.
+
+Backend endpoints (thin shells over `src/`):
+- `GET  /api/projects`
+- `POST /api/projects` (create) · `GET /api/projects/{name}` (manifest)
+- `POST /api/projects/{name}/lyrics` (regenerate or save edits)
+- `POST /api/projects/{name}/plan` (run shot planner)
+- `POST /api/projects/{name}/render?pass=draft|final&yes=true` (kicks the render loop;
+  streams progress via SSE)
+- `POST /api/projects/{name}/shots/{id}/status` (approved | redo)
+- `POST /api/projects/{name}/assemble`
+- `GET  /api/projects/{name}/shots/{id}/video`  (serves the local mp4)
+- `GET  /api/projects/{name}/final`             (serves final.mp4)
+
+Constraints:
+- Binds to `127.0.0.1` only — never `0.0.0.0`. Single-user, single-machine.
+- No upload to external services; all media stays in `projects/<name>/`.
+- The CLI continues to work standalone; the web UI is a thin wrapper around the same
+  manifest. Anything you can do in the UI you can also do by editing files.
+
+Acceptance: `nimbo-web` command starts uvicorn; opening `127.0.0.1:8000` lets a user run
+a full project end-to-end (topic or MP3 → lyrics → plan → draft → approve → final) without
+touching the terminal beyond the start command. Outputs match what the CLI would produce.
+
 <!-- Additional playbook sections will be appended as provided. -->
 
 

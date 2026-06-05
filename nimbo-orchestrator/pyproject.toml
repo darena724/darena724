@@ -1,0 +1,41 @@
+[project]
+name = "nimbo-orchestrator"
+version = "0.1.0"
+description = "Local, MCP-driven pipeline that turns a song + the Nimbo character into a ~3-minute kids' music video using a provider-abstracted video-generation API and ffmpeg."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    # MCP server SDK (FastMCP lives inside the `mcp` package)
+    "mcp>=1.2.0",
+    # Default aggregator client; Replicate is an optional alternative (see [project.optional-dependencies])
+    "fal-client>=0.5.0",
+    # Optional Veo-direct path (model="veo-direct")
+    "google-genai>=0.3.0",
+    # Config / validation / media
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.6.0",
+    "ffmpeg-python>=0.2.0",
+    # Reference-image validation (Prompt 3)
+    "pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+replicate = ["replicate>=0.25.0"]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+# Wired up in Prompt 7
+make-video = "src.pipeline:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

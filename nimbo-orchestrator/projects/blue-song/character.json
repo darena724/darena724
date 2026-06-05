@@ -1,0 +1,16 @@
+{
+  "name": "Nimbo",
+  "ref_images": [
+    "refs/nimbo_modelsheet.png"
+  ],
+  "style_lock": "The same character Nimbo (small round cream plush-like creature, oversized gentle close-set eyes, soft coral cheeks, soft glowing head cloud), consistent design and proportions. Style: clean soft 3D render, matte soft-touch surfaces, simple rounded shapes, gentle even lighting, soothing muted pastel palette with one accent, NO neon, calm uncluttered composition. Designer-toy / gentle Pixar-adjacent look. No text, no logos. --ar 16:9",
+  "negative": "neon colors, oversaturated, busy cluttered background, harsh lighting, scary, sharp teeth, star shape, raindrop shape, human toddler, oversized-head toddler family, fox mascot, shark family, yellow chick, belly badge, transforming robot, text, watermark, logo, brand names",
+  "palette": [
+    "#F4EBD8",
+    "#FBF4E6",
+    "#E0D2B5",
+    "#F1B49E",
+    "#322B22",
+    "#F2C84B"
+  ]
+}

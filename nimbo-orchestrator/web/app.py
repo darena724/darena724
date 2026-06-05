@@ -299,12 +299,17 @@ def create_app(
         p = require_project(name)
         body = await req.json() if await _has_body(req) else {}
         topic = (body.get("topic") or "").strip() or None
-        model = body.get("model") or None
+        # accept either a single `model` (both passes) or separate draft/final models
+        single = body.get("model") or None
+        draft_model = body.get("draft_model") or single or planner_mod.DEFAULT_DRAFT_MODEL
+        final_model = body.get("final_model") or single or planner_mod.DEFAULT_FINAL_MODEL
+        if draft_model not in render_mod.gen.MODEL_REGISTRY:
+            raise HTTPException(400, f"unknown draft model '{draft_model}'")
+        if final_model not in render_mod.gen.MODEL_REGISTRY:
+            raise HTTPException(400, f"unknown final model '{final_model}'")
         try:
             existing = load_manifest(p / "manifest.json") if (p / "manifest.json").exists() else None
             resolved_topic = topic or (existing.project.topic if existing else None) or name
-            draft_model = model or planner_mod.DEFAULT_DRAFT_MODEL
-            final_model = model or planner_mod.DEFAULT_FINAL_MODEL
             await run_in_threadpool(
                 planner_mod.run, p,
                 topic=resolved_topic, draft_model=draft_model, final_model=final_model,
@@ -318,6 +323,59 @@ def create_app(
         except Exception as exc:  # noqa: BLE001
             log.error(f"plan failed: {exc}", project=name, stage="plan")
             raise HTTPException(500, str(exc))
+
+    # ── change models (re-plans if the DRAFT model changes; resets render progress) ──
+    @app.post("/api/projects/{name}/models")
+    async def set_models(name: str, req: Request) -> dict:
+        p = require_project(name)
+        body = await req.json()
+        m = load_manifest(p / "manifest.json")
+        reg = render_mod.gen.MODEL_REGISTRY
+
+        new_draft = body.get("draft_model") or m.project.draft_model
+        new_final = body.get("final_model") or m.project.final_model
+        force = bool(body.get("force", False))
+        for which, mid in (("draft", new_draft), ("final", new_final)):
+            if mid not in reg:
+                raise HTTPException(400, f"unknown {which} model '{mid}'")
+
+        draft_changed = new_draft != m.project.draft_model
+        # changing the draft model re-tiles the shots (clip cap may differ) -> resets progress
+        rendered = [s for s in m.shots if s.status is not ShotStatus.pending]
+        if draft_changed and rendered and not force:
+            raise HTTPException(
+                409,
+                f"Changing the draft model re-plans the shots and resets render progress "
+                f"({len(rendered)} shot(s) already worked on). Confirm to proceed.",
+            )
+
+        warning = None
+        if reg[new_final].max_seconds < reg[new_draft].max_seconds:
+            warning = (
+                f"Heads up: the final model '{new_final}' caps clips at {reg[new_final].max_seconds}s "
+                f"but the draft model allows {reg[new_draft].max_seconds}s — some shots may exceed "
+                f"the final model's limit. Pick a final model with an equal/larger limit if you can."
+            )
+
+        if draft_changed:
+            await run_in_threadpool(
+                planner_mod.run, p,
+                topic=m.project.topic, draft_model=new_draft, final_model=new_final,
+                aspect_ratio=m.project.aspect_ratio, resolution=m.project.resolution, save=True,
+            )
+            log.info(f"models changed (re-planned): draft={new_draft}, final={new_final}",
+                     project=name, stage="plan")
+        else:
+            m.project.final_model = new_final
+            m.project.final_tier = reg[new_final].tier
+            m.project.draft_tier = reg[new_draft].tier
+            save_manifest(m, p / "manifest.json")
+            log.info(f"final model changed to {new_final}", project=name, stage="plan")
+
+        out = project_payload(name)
+        out["warning"] = warning
+        return out
+
 
     # ── cost preview ──────────────────────────────────────────────────────────
     @app.get("/api/projects/{name}/cost")

@@ -15,6 +15,7 @@ const api = async (url, opts) => {
 let current = null;        // selected project name
 let jobPoll = null;        // interval handle while a job runs
 let logPoll = null;
+let MODELS = [];           // cached /api/models list
 
 const STEPS = ["Lyrics", "Shot plan", "Draft", "Approve", "Final", "Assemble", "Done"];
 const STAGE_STEP = { song: 0, lyrics: 0, plan: 1, draft: 2, approval: 3, final: 4, assemble: 5, done: 6 };
@@ -34,7 +35,59 @@ window.addEventListener("DOMContentLoaded", () => {
   $("log-level").onchange = refreshLog;
   refreshHealth();
   refreshProjects();
+  api("/api/models").then((m) => { MODELS = m; }).catch(() => {});
 });
+
+// ── model picker ───────────────────────────────────────────────────────────────
+function modelOptions(selected) {
+  // order cheapest -> priciest so "cheapest" reads top-down
+  const sorted = [...MODELS].sort((a, b) => a.per_second_cost_estimate_usd - b.per_second_cost_estimate_usd);
+  return sorted.map((m) => {
+    const tag = m.tier === "draft" ? "cheapest" : m.tier === "pro" ? "high-end" : "mid";
+    const label = `${m.label} — ~$${m.per_second_cost_estimate_usd.toFixed(3)}/s · ${tag} · up to ${m.max_seconds}s`;
+    return `<option value="${m.id}" ${m.id === selected ? "selected" : ""}>${label}</option>`;
+  }).join("");
+}
+
+function modelCard(p) {
+  const el = div("card");
+  const draft = p.project.draft_model, final = p.project.final_model;
+  el.innerHTML = `<h3>🎚 Models <span class="muted" style="font-weight:400">— pick the quality tier</span></h3>
+    <p class="muted">The <b>draft</b> model renders cheap previews of every shot; the <b>final</b>
+      model re-renders only the shots you approve, at higher quality. Set either to any tier you like.</p>
+    <label>Draft (preview) model<br><select id="sel-draft">${modelOptions(draft)}</select></label>
+    <label style="margin-top:8px">Final (ship) model<br><select id="sel-final">${modelOptions(final)}</select></label>
+    <div id="model-msg" class="muted" style="margin-top:6px"></div>`;
+  const apply = btn("Apply models", async () => {
+    const nd = el.querySelector("#sel-draft").value;
+    const nf = el.querySelector("#sel-final").value;
+    if (nd === draft && nf === final) { el.querySelector("#model-msg").textContent = "No change."; return; }
+    await applyModels(nd, nf, draft);
+  });
+  el.appendChild(apply);
+  return el;
+}
+
+async function applyModels(draftModel, finalModel, oldDraft, force = false) {
+  try {
+    const r = await api(`/api/projects/${current}/models`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ draft_model: draftModel, final_model: finalModel, force }),
+    });
+    if (r.warning) alert(r.warning);
+    flash("Models updated.");
+    renderProject();
+  } catch (e) {
+    // 409 -> changing draft model resets render progress; confirm and retry forced
+    if (/resets render progress/i.test(e.message)) {
+      if (confirm(e.message + "\n\nRe-plan now? (your draft clips will be re-rendered)")) {
+        return applyModels(draftModel, finalModel, oldDraft, true);
+      }
+      return;
+    }
+    alert("Could not change models: " + e.message);
+  }
+}
 
 // ── health banner ───────────────────────────────────────────────────────────
 async function refreshHealth() {
@@ -110,6 +163,8 @@ async function renderProject() {
 
   const stage = $("pv-stage");
   stage.innerHTML = "";
+  // model picker — available once a plan exists (it reads/writes the manifest models)
+  if (p.project) stage.appendChild(modelCard(p));
   if (p.stage === "song" || p.stage === "lyrics") stage.appendChild(lyricsPanel(p));
   else if (p.stage === "plan") stage.appendChild(planPanel(p));
   else if (p.stage === "draft") stage.appendChild(draftPanel(p));

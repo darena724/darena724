@@ -208,3 +208,76 @@ def test_index_served(client):
     r = client.get("/")
     assert r.status_code == 200
     assert "Nimbo" in r.text
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Model selection
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_models_endpoint_lists_tiers(client):
+    ms = client.get("/api/models").json()
+    ids = {m["id"] for m in ms}
+    assert {"seedance-2.0-fast", "veo-3.1", "kling-v3-pro"} <= ids
+    assert all("per_second_cost_estimate_usd" in m and "tier" in m for m in ms)
+
+
+def _plan(client, name="mv"):
+    client.post(f"/api/projects?name={name}&topic=learning the color blue")
+    client.post(f"/api/projects/{name}/plan", json={})
+    return name
+
+
+def test_plan_accepts_separate_draft_and_final_models(client):
+    client.post("/api/projects?name=mv&topic=learning the color blue")
+    p = client.post("/api/projects/mv/plan",
+                    json={"draft_model": "kling-v3-standard", "final_model": "kling-v3-pro"}).json()
+    assert p["project"]["draft_model"] == "kling-v3-standard"
+    assert p["project"]["final_model"] == "kling-v3-pro"
+
+
+def test_change_final_model_only_preserves_shots(client):
+    name = _plan(client)
+    before = client.get(f"/api/projects/{name}").json()
+    n_before = len(before["shots"])
+    r = client.post(f"/api/projects/{name}/models", json={"final_model": "kling-v3-pro"}).json()
+    assert r["project"]["final_model"] == "kling-v3-pro"
+    assert r["project"]["draft_model"] == "seedance-2.0-fast"  # unchanged
+    assert len(r["shots"]) == n_before                          # not re-planned
+    assert all(s["status"] == "pending" for s in r["shots"])
+
+
+def test_change_draft_model_replans(client):
+    name = _plan(client)
+    before = client.get(f"/api/projects/{name}").json()
+    n_before = len(before["shots"])
+    # Veo caps clips at 8s vs Seedance 15s -> more shots after re-tiling
+    r = client.post(f"/api/projects/{name}/models", json={"draft_model": "veo-3.1-fast"}).json()
+    assert r["project"]["draft_model"] == "veo-3.1-fast"
+    assert len(r["shots"]) > n_before
+    assert all(s["duration_s"] <= 8 + 1e-6 for s in r["shots"])
+
+
+def test_change_draft_model_with_rendered_shots_needs_force(client):
+    name = _plan(client)
+    client.post(f"/api/projects/{name}/render", json={"pass": "draft", "confirm": True})
+    _wait_idle(client, name)
+    # without force -> 409 (would reset render progress)
+    r = client.post(f"/api/projects/{name}/models", json={"draft_model": "veo-3.1-fast"})
+    assert r.status_code == 409
+    # with force -> re-plans and resets to pending
+    r2 = client.post(f"/api/projects/{name}/models",
+                     json={"draft_model": "veo-3.1-fast", "force": True}).json()
+    assert r2["project"]["draft_model"] == "veo-3.1-fast"
+    assert all(s["status"] == "pending" for s in r2["shots"])
+
+
+def test_cap_mismatch_warning(client):
+    name = _plan(client)  # draft seedance (15s), final seedance (15s)
+    r = client.post(f"/api/projects/{name}/models", json={"final_model": "veo-3.1-fast"}).json()
+    assert r["warning"] and "exceed" in r["warning"]
+
+
+def test_invalid_model_rejected(client):
+    name = _plan(client)
+    assert client.post(f"/api/projects/{name}/models", json={"final_model": "nope"}).status_code == 400

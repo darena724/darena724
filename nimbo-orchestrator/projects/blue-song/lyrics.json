@@ -1,0 +1,52 @@
+{
+  "sections": [
+    {
+      "name": "intro",
+      "start_s": 0.0,
+      "end_s": 16.9,
+      "text": "Hello, hello, it's Nimbo here,\nA gentle song for you, my dear.\nToday we learn the color blue,\nSo cozy, calm, and soft and true."
+    },
+    {
+      "name": "verse_1",
+      "start_s": 16.9,
+      "end_s": 46.1,
+      "text": "Look up high and look around,\nBlue is here, it can be found.\nThe quiet sky, so wide and blue,\nSoftly shining over you."
+    },
+    {
+      "name": "chorus_1",
+      "start_s": 46.1,
+      "end_s": 68.6,
+      "text": "Blue, blue, the color blue,\nSing it slow, the whole day through.\nBlue, blue, can you say blue?\nNimbo's cloud is glowing blue."
+    },
+    {
+      "name": "verse_2",
+      "start_s": 68.6,
+      "end_s": 97.9,
+      "text": "Blue like the gentle sea,\nBlue as calm as calm can be.\nClose your eyes and picture blue,\nPeaceful blue for me and you."
+    },
+    {
+      "name": "chorus_2",
+      "start_s": 97.9,
+      "end_s": 120.4,
+      "text": "Blue, blue, the color blue,\nSing it slow, the whole day through.\nBlue, blue, can you say blue?\nNimbo's cloud is glowing blue."
+    },
+    {
+      "name": "bridge",
+      "start_s": 120.4,
+      "end_s": 139.5,
+      "text": "Round and soft the color stays,\nBlue, blue, in gentle ways."
+    },
+    {
+      "name": "chorus_3",
+      "start_s": 139.5,
+      "end_s": 162.0,
+      "text": "Blue, blue, the color blue,\nSing it slow, the whole day through.\nBlue, blue, can you say blue?\nNimbo's cloud is glowing blue."
+    },
+    {
+      "name": "outro",
+      "start_s": 162.0,
+      "end_s": 180.0,
+      "text": "Now we know the color blue,\nThank you, friends, and Nimbo too.\nWave goodbye, the song is through,\nSweet and calm, the color blue."
+    }
+  ]
+}
